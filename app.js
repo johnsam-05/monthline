@@ -421,6 +421,10 @@
       return JSON.stringify(currentMonthHolidays) !== JSON.stringify(defaultMonthHolidays);
     }
 
+    function hasResettableMonthData() {
+      return Object.keys(currentRecord.overrides).length > 0 || hasCustomHolidaysForCurrentMonth();
+    }
+
     function persistHolidayList() {
       if (!storage) {
         holidayListStatus.textContent = "The holiday list changed, but browser storage is unavailable.";
@@ -582,7 +586,7 @@
       documentRef.getElementById("calendarDaysCount").textContent = formatNumber(calculation.totalDays);
       documentRef.getElementById("workingDaysCount").textContent = formatNumber(calculation.scheduledWorkingDays);
       documentRef.getElementById("weeklyOffsCount").textContent = formatNumber(calculation.weeklyOffs);
-      resetButton.disabled = Object.keys(currentRecord.overrides).length === 0 && !hasCustomHolidaysForCurrentMonth();
+      resetButton.disabled = !hasResettableMonthData();
     }
 
     function renderSummary(calculation) {
@@ -830,7 +834,7 @@
     });
 
     resetButton.addEventListener("click", () => {
-      if (Object.keys(currentRecord.overrides).length === 0) return;
+      if (!hasResettableMonthData()) return;
       resetDialog.showModal();
     });
 
