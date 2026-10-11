@@ -95,22 +95,6 @@ a:focus-visible {
   font-weight: 680;
 }
 
-.privacy-note {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.privacy-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #64a47e;
-  box-shadow: 0 0 0 3px #e5f1e8;
-}
-
 .topbar-tools {
   display: flex;
   align-items: center;
@@ -1177,10 +1161,6 @@ h1 {
     font-size: 16px;
   }
 
-  .privacy-note {
-    font-size: 10px;
-  }
-
   .page-shell {
     width: calc(100% - 28px);
     padding: 23px 0 34px;
@@ -1419,11 +1399,6 @@ h1 {
 
 [data-theme="dark"] .brand-mark {
   color: #102219;
-}
-
-[data-theme="dark"] .privacy-dot {
-  background: #7bc697;
-  box-shadow: 0 0 0 3px #293d30;
 }
 
 [data-theme="dark"] .theme-toggle,
@@ -1675,10 +1650,6 @@ h1 {
 @media (max-width: 560px) {
   .topbar-tools {
     gap: 9px;
-  }
-
-  .privacy-note {
-    gap: 6px;
   }
 
   .theme-toggle {

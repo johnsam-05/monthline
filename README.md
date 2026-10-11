@@ -17,4 +17,4 @@ All page assets use relative paths, so the site works from a GitHub Pages projec
 
 ## Privacy
 
-The app has no backend or network requests. Salary entries, theme preference, and the imported holiday list are stored in the visitor's browser on that site's origin. Imported Excel files are parsed locally. Anyone can view files committed to a public repository, so do not put salary information or other personal data in the repository.
+The app has no backend or network requests. Salary, paid-leave settings, calendar entries, theme preference, and the imported holiday list are stored in browser `localStorage` for that site. Each device and browser profile has its own separate storage; data is not sent to GitHub Pages or synced to another device. Moving to another device requires manually entering the data again. Imported Excel files are parsed locally and contain holiday dates, not salary information. Anyone can view files committed to a public repository, so do not put salary information or other personal data in the repository.
