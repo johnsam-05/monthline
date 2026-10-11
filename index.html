@@ -127,8 +127,8 @@
           <div class="holiday-workbook-copy">
             <span class="workbook-mark" aria-hidden="true">XLS</span>
             <div>
-              <strong>Paid holiday list</strong>
-              <span>Edit in Excel, then import the workbook. Import replaces this device's list.</span>
+              <strong>Manage paid holidays</strong>
+              <span>Download, edit Date and Holiday, then import to preview.</span>
             </div>
           </div>
           <div class="holiday-workbook-actions">
@@ -237,6 +237,25 @@
         <div class="dialog-actions-end">
           <button id="cancelReset" class="secondary-button" type="button">Cancel</button>
           <button id="confirmReset" class="danger-button" type="button">Reset month</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="holidayImportDialog" class="date-dialog import-dialog" aria-labelledby="holidayImportTitle" aria-describedby="holidayImportDescription">
+    <div class="dialog-content">
+      <div class="dialog-heading">
+        <p class="eyebrow">HOLIDAY WORKBOOK PREVIEW</p>
+        <h2 id="holidayImportTitle">Review imported holidays</h2>
+      </div>
+      <p id="holidayImportDescription" class="dialog-copy"></p>
+      <ul id="holidayImportPreview" class="holiday-preview-list"></ul>
+      <p class="import-replacement-note">Confirming replaces the complete holiday list saved in this browser. Your salary and monthly leave entries are not replaced.</p>
+      <div class="dialog-actions">
+        <span></span>
+        <div class="dialog-actions-end">
+          <button id="cancelHolidayImport" class="secondary-button" type="button">Cancel</button>
+          <button id="confirmHolidayImport" class="primary-button" type="button">Replace holiday list</button>
         </div>
       </div>
     </div>

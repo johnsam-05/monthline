@@ -15,6 +15,15 @@ Open `index.html` in a browser. For the most reliable browser storage behavior, 
 
 All page assets use relative paths, so the site works from a GitHub Pages project URL without a base-path edit. The included `.nojekyll` file tells Pages to publish the static files as-is.
 
+## Manage paid holidays
+
+1. Select **Download Excel** to export the currently saved holiday list. The workbook contains a `Holidays` sheet and an `Instructions` sheet.
+2. In Excel, edit the `Date` and `Holiday` columns on the `Holidays` sheet. Keep those headers; the `Day` column is for reference.
+3. Save the edited workbook as `.xlsx`, then select **Import Excel** and choose the file.
+4. Review the date/name preview. **Cancel** keeps the current holiday list. **Replace holiday list** applies the complete imported list to this browser and updates the calendar.
+
+Import is processed locally. It replaces the entire holiday list, not just the changed rows; salary and monthly schedule/leave entries are not replaced.
+
 ## Privacy
 
 The app has no backend or network requests. Salary and paid-leave settings carry across months, while work schedules and calendar entries remain month-specific. All settings, theme preference, and the imported holiday list are stored in browser `localStorage` for that site. Each device and browser profile has its own separate storage; data is not sent to GitHub Pages or synced to another device. Moving to another device requires manually entering the data again. Imported Excel files are parsed locally and contain holiday dates, not salary information. Anyone can view files committed to a public repository, so do not put salary information or other personal data in the repository.

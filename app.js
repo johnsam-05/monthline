@@ -299,7 +299,10 @@
     const status = documentRef.getElementById("calendarStatus");
     const holidayListStatus = documentRef.getElementById("holidayListStatus");
     const holidayWorkbookFile = documentRef.getElementById("holidayWorkbookFile");
+    const holidayImportDialog = documentRef.getElementById("holidayImportDialog");
+    const holidayImportPreview = documentRef.getElementById("holidayImportPreview");
     let holidays = loadHolidayList(storage);
+    let pendingHolidayImport = null;
     const metricNodes = {
       monthlySalary: documentRef.getElementById("monthlySalaryResult"),
       calendarDays: documentRef.getElementById("calendarDaysResult"),
@@ -461,10 +464,11 @@
 
       const instructions = xlsx.utils.aoa_to_sheet([
         ["Monthline Holiday List"],
-        ["Edit the Holidays sheet and save this workbook as .xlsx."],
-        ["Keep the Date and Holiday columns filled for each paid holiday."],
-        ["Dates may be Excel dates or YYYY-MM-DD values; Day is for reference."],
-        ["Import the edited workbook in Monthline. Import replaces the saved list on this device."],
+        ["Download this workbook to get the current paid holiday list."],
+        ["Edit the Date and Holiday columns on the Holidays sheet. Keep the column headers unchanged."],
+        ["Dates may be Excel dates or YYYY-MM-DD values. Day is for reference."],
+        ["Save as .xlsx, then choose Import Excel in Monthline to review a preview."],
+        ["Confirming import replaces the complete holiday list saved in this browser."],
         ["The workbook and salary details are processed locally and are never uploaded."]
       ]);
       instructions["!cols"] = [{ wch: 96 }];
@@ -524,6 +528,61 @@
 
       if (imported.length === 0) throw new Error("Add at least one paid holiday before importing.");
       return normalizeHolidayList(imported);
+    }
+
+    function showHolidayImportPreview(importedHolidays) {
+      pendingHolidayImport = importedHolidays;
+      const previewDescription = documentRef.getElementById("holidayImportDescription");
+      previewDescription.textContent = `${formatNumber(importedHolidays.length)} paid holidays found. Review the dates and names before replacing your saved list.`;
+      holidayImportPreview.replaceChildren();
+      const previewItems = importedHolidays.slice(0, 8);
+      for (const holiday of previewItems) {
+        const item = documentRef.createElement("li");
+        const date = documentRef.createElement("time");
+        date.dateTime = holiday.date;
+        date.textContent = holiday.date;
+        const name = documentRef.createElement("span");
+        name.textContent = holiday.name;
+        item.append(date, name);
+        holidayImportPreview.appendChild(item);
+      }
+      if (importedHolidays.length > previewItems.length) {
+        const more = documentRef.createElement("li");
+        more.className = "holiday-preview-more";
+        more.textContent = `and ${formatNumber(importedHolidays.length - previewItems.length)} more`;
+        holidayImportPreview.appendChild(more);
+      }
+      holidayImportDialog.showModal();
+    }
+
+    function applyHolidayImport(importedHolidays) {
+      holidays = importedHolidays;
+      const importedHolidayDates = new Set(holidays.map((holiday) => holiday.date));
+
+      for (const [period, record] of Object.entries(records)) {
+        if (!record || !record.overrides) continue;
+        const periodParts = period.match(/^(\d{4})-(\d{2})$/);
+        if (!periodParts) continue;
+        const [, year, month] = periodParts;
+        for (const [day, category] of Object.entries(record.overrides)) {
+          const holidayDate = dateKey(year, month, Number(day));
+          if (category === "holiday" || importedHolidayDates.has(holidayDate)) {
+            delete record.overrides[day];
+            if (record.leaveReturns) delete record.leaveReturns[day];
+          }
+        }
+      }
+      if (storage) {
+        try {
+          storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, months: records }));
+        } catch (error) {
+          holidayListStatus.textContent = "Imported, but could not update saved date overrides.";
+        }
+      }
+
+      persistHolidayList();
+      renderAll();
+      holidayListStatus.textContent = `Imported ${formatNumber(holidays.length)} paid holidays. The updated list is saved in this browser.`;
     }
 
     function renderCalendar(calculation) {
@@ -716,38 +775,26 @@
         if (!xlsx) throw new Error("The local Excel workbook tool did not load.");
         const workbook = xlsx.read(await file.arrayBuffer(), { type: "array", cellDates: true });
         const importedHolidays = parseHolidayWorkbook(workbook);
-        holidays = importedHolidays;
-        const importedHolidayDates = new Set(holidays.map((holiday) => holiday.date));
-
-        for (const [period, record] of Object.entries(records)) {
-          if (!record || !record.overrides) continue;
-          const periodParts = period.match(/^(\d{4})-(\d{2})$/);
-          if (!periodParts) continue;
-          const [, year, month] = periodParts;
-          for (const [day, category] of Object.entries(record.overrides)) {
-            const holidayDate = dateKey(year, month, Number(day));
-            if (category === "holiday" || importedHolidayDates.has(holidayDate)) {
-              delete record.overrides[day];
-              if (record.leaveReturns) delete record.leaveReturns[day];
-            }
-          }
-        }
-        if (storage) {
-          try {
-            storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, months: records }));
-          } catch (error) {
-            holidayListStatus.textContent = "Imported, but could not update saved date overrides.";
-          }
-        }
-
-        persistHolidayList();
-        renderAll();
-        holidayListStatus.textContent = `Imported ${formatNumber(holidays.length)} paid holidays. The updated list is saved on this device.`;
+        showHolidayImportPreview(importedHolidays);
       } catch (error) {
         holidayListStatus.textContent = `Could not import this workbook. ${error.message}`;
       } finally {
         holidayWorkbookFile.value = "";
       }
+    });
+
+    documentRef.getElementById("cancelHolidayImport").addEventListener("click", () => {
+      pendingHolidayImport = null;
+      holidayImportDialog.close();
+      holidayListStatus.textContent = "Import cancelled. Your saved holiday list was not changed.";
+    });
+
+    documentRef.getElementById("confirmHolidayImport").addEventListener("click", () => {
+      if (!pendingHolidayImport) return;
+      const importedHolidays = pendingHolidayImport;
+      pendingHolidayImport = null;
+      holidayImportDialog.close();
+      applyHolidayImport(importedHolidays);
     });
 
     function focusCalendarDay(day) {

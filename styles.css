@@ -958,6 +958,58 @@ h1 {
   line-height: 1.55;
 }
 
+.import-dialog {
+  max-height: min(720px, calc(100vh - 32px));
+  overflow: auto;
+}
+
+.holiday-preview-list {
+  display: grid;
+  gap: 0;
+  max-height: 240px;
+  overflow: auto;
+  margin: 14px 0 0;
+  padding: 0;
+  border: 1px solid #e2eae4;
+  border-radius: 6px;
+  list-style: none;
+}
+
+.holiday-preview-list li {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #edf1ee;
+  color: #344a3e;
+  font-size: 11px;
+}
+
+.holiday-preview-list li:last-child {
+  border-bottom: 0;
+}
+
+.holiday-preview-list time {
+  flex: 0 0 auto;
+  color: #748179;
+  font-variant-numeric: tabular-nums;
+}
+
+.holiday-preview-list .holiday-preview-more {
+  justify-content: center;
+  color: #65766c;
+  font-size: 10px;
+}
+
+.import-replacement-note {
+  margin: 12px 0 0;
+  color: #75837b;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 .dialog-actions {
   display: flex;
   align-items: center;
@@ -1623,6 +1675,21 @@ h1 {
 [data-theme="dark"] .dialog-hint,
 [data-theme="dark"] .dialog-copy {
   color: #aebdb3;
+}
+
+[data-theme="dark"] .holiday-preview-list {
+  border-color: #394c40;
+}
+
+[data-theme="dark"] .holiday-preview-list li {
+  border-color: #2d3d34;
+  color: #dce9e0;
+}
+
+[data-theme="dark"] .holiday-preview-list time,
+[data-theme="dark"] .holiday-preview-list .holiday-preview-more,
+[data-theme="dark"] .import-replacement-note {
+  color: #aab9b0;
 }
 
 [data-theme="dark"] .dialog-actions {
