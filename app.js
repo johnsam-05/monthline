@@ -22,6 +22,7 @@
   const THEME_STORAGE_KEY = "monthline.theme.v1";
   const HOLIDAY_STORAGE_KEY = "monthline.holidays.v1";
   const VALID_CATEGORIES = new Set(["work", "holiday", "off", "leave"]);
+  const VALID_CALCULATION_METHODS = new Set(["scheduled-working-days", "calendar-days", "fixed-30-days"]);
   const DEFAULT_HOLIDAYS = [
     { date: "2026-01-15", name: "Pongal" },
     { date: "2026-01-16", name: "Thiruvalluvar Day" },
@@ -125,6 +126,9 @@
     const salaryValue = Number(salaryText);
     const salaryConfigured = salaryText !== "" && Number.isFinite(salaryValue) && salaryValue >= 0;
     const salary = salaryConfigured ? salaryValue : 0;
+    const calculationMethod = VALID_CALCULATION_METHODS.has(options.calculationMethod)
+      ? options.calculationMethod
+      : "scheduled-working-days";
     const allowanceValue = Number(options.paidLeave);
     const paidLeaveAllowance = Number.isFinite(allowanceValue) ? Math.max(0, Math.floor(allowanceValue)) : 0;
     const totalDays = daysInMonth(year, month);
@@ -141,7 +145,7 @@
       const automaticOff = isScheduledOff(year, month, day, workweek);
       const holidayName = holidaysByDate.get(dateKey(year, month, day)) || "";
       const isHoliday = category === "holiday";
-      const isWeeklyOff = category === "off" || (isHoliday && automaticOff);
+      const isWeeklyOff = category === "off";
       const isWorking = category === "work" || category === "leave" || (isHoliday && !automaticOff);
 
       if (isHoliday) governmentHolidays += 1;
@@ -163,7 +167,12 @@
     const paidLeaveUsed = Math.min(paidLeaveAllowance, leaveDates.length);
     const paidDates = new Set(leaveDates.slice(0, paidLeaveUsed));
     const unpaidLeaveDays = leaveDates.length - paidLeaveUsed;
-    const dailySalary = scheduledWorkingDays > 0 ? salary / scheduledWorkingDays : null;
+    const dailySalaryDivisor = calculationMethod === "calendar-days"
+      ? totalDays
+      : calculationMethod === "fixed-30-days"
+        ? 30
+        : scheduledWorkingDays;
+    const dailySalary = dailySalaryDivisor > 0 ? salary / dailySalaryDivisor : null;
     const deduction = dailySalary === null ? 0 : unpaidLeaveDays * dailySalary;
     const estimatedSalary = Math.max(0, salary - deduction);
 
@@ -171,8 +180,10 @@
       year,
       month,
       workweek,
+      calculationMethod,
       totalDays,
       scheduledWorkingDays,
+      dailySalaryDivisor,
       governmentHolidays,
       weeklyOffs,
       leaveDates,
@@ -202,7 +213,10 @@
     const allowance = Number(settings && settings.paidLeave);
     return {
       salary,
-      paidLeave: Number.isFinite(allowance) ? Math.max(0, Math.floor(allowance)) : 0
+      paidLeave: Number.isFinite(allowance) ? Math.max(0, Math.floor(allowance)) : 0,
+      calculationMethod: VALID_CALCULATION_METHODS.has(settings && settings.calculationMethod)
+        ? settings.calculationMethod
+        : "scheduled-working-days"
     };
   }
 
@@ -293,6 +307,8 @@
     const yearInput = documentRef.getElementById("yearInput");
     const salaryInput = documentRef.getElementById("salaryInput");
     const paidLeaveInput = documentRef.getElementById("paidLeaveInput");
+    const calculationMethodInput = documentRef.getElementById("calculationMethod");
+    const calculationMethodHelp = documentRef.getElementById("calculationMethodHelp");
     const calendarGrid = documentRef.getElementById("calendarGrid");
     const resetButton = documentRef.getElementById("resetMonth");
     const resetDialog = documentRef.getElementById("resetDialog");
@@ -307,6 +323,7 @@
       monthlySalary: documentRef.getElementById("monthlySalaryResult"),
       calendarDays: documentRef.getElementById("calendarDaysResult"),
       workingDays: documentRef.getElementById("workingDaysResult"),
+      dailySalaryDivisor: documentRef.getElementById("dailySalaryDivisorResult"),
       holidays: documentRef.getElementById("governmentHolidaysResult"),
       weeklyOffs: documentRef.getElementById("weeklyOffsResult"),
       leaveDays: documentRef.getElementById("leaveDaysResult"),
@@ -366,11 +383,22 @@
 
     persistSalarySettings();
 
+    function updateCalculationMethodHelp() {
+      const explanations = {
+        "scheduled-working-days": "Monthly salary ÷ scheduled working days after paid holidays.",
+        "calendar-days": "Monthly salary ÷ every calendar day in this month.",
+        "fixed-30-days": "Monthly salary ÷ 30, regardless of month length."
+      };
+      calculationMethodHelp.textContent = explanations[salarySettings.calculationMethod];
+    }
+
     function setControlsFromRecord() {
       monthSelect.value = String(currentMonth);
       yearInput.value = String(currentYear);
       salaryInput.value = salarySettings.salary;
       paidLeaveInput.value = String(salarySettings.paidLeave);
+      calculationMethodInput.value = salarySettings.calculationMethod;
+      updateCalculationMethodHelp();
       const selectedWorkweek = documentRef.querySelector(`input[name="workweek"][value="${currentRecord.workweek}"]`);
       if (selectedWorkweek) selectedWorkweek.checked = true;
     }
@@ -399,6 +427,7 @@
         month: currentMonth,
         salary: salaryInput.value,
         paidLeave: paidLeaveInput.value,
+        calculationMethod: salarySettings.calculationMethod,
         workweek: currentRecord.workweek,
         overrides: currentRecord.overrides,
         holidays
@@ -652,6 +681,11 @@
       metricNodes.monthlySalary.textContent = calculation.salaryConfigured ? formatCurrency(calculation.salary) : "—";
       metricNodes.calendarDays.textContent = formatNumber(calculation.totalDays);
       metricNodes.workingDays.textContent = formatNumber(calculation.scheduledWorkingDays);
+      metricNodes.dailySalaryDivisor.textContent = calculation.calculationMethod === "calendar-days"
+        ? `${formatNumber(calculation.dailySalaryDivisor)} calendar days`
+        : calculation.calculationMethod === "fixed-30-days"
+          ? "30 fixed days"
+          : `${formatNumber(calculation.dailySalaryDivisor)} scheduled days`;
       metricNodes.holidays.textContent = formatNumber(calculation.governmentHolidays);
       metricNodes.weeklyOffs.textContent = formatNumber(calculation.weeklyOffs);
       metricNodes.leaveDays.textContent = formatNumber(calculation.leaveDays);
@@ -671,8 +705,8 @@
       const note = documentRef.getElementById("calculationNote");
       if (!calculation.salaryConfigured) {
         note.textContent = "Enter your monthly salary to see the estimate and daily rate.";
-      } else if (calculation.scheduledWorkingDays === 0) {
-        note.textContent = "No scheduled working days remain. Daily rate is unavailable until a working day is set.";
+      } else if (calculation.dailySalary === null) {
+        note.textContent = "No scheduled working days remain for this divisor. Choose calendar days or fixed 30 days if that matches your employer's rule.";
       } else if (calculation.unpaidLeaveDays > 0) {
         note.textContent = `${formatNumber(calculation.unpaidLeaveDays)} unpaid leave ${calculation.unpaidLeaveDays === 1 ? "day" : "days"} × ${formatCurrency(calculation.dailySalary)} per scheduled working day.`;
       } else {
@@ -825,6 +859,14 @@
 
     salaryInput.addEventListener("input", updateRecordFromControls);
     paidLeaveInput.addEventListener("input", updateRecordFromControls);
+    calculationMethodInput.addEventListener("change", () => {
+      salarySettings.calculationMethod = VALID_CALCULATION_METHODS.has(calculationMethodInput.value)
+        ? calculationMethodInput.value
+        : "scheduled-working-days";
+      persistSalarySettings();
+      updateCalculationMethodHelp();
+      renderAll();
+    });
 
     for (const radio of documentRef.querySelectorAll('input[name="workweek"]')) {
       radio.addEventListener("change", () => {

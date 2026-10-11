@@ -86,6 +86,16 @@
           </div>
         </div>
 
+        <div class="field-group calculation-method-field">
+          <label for="calculationMethod">Daily salary divisor</label>
+          <select id="calculationMethod" name="calculationMethod" aria-describedby="calculationMethodHelp">
+            <option value="scheduled-working-days">Scheduled working days</option>
+            <option value="calendar-days">Calendar days</option>
+            <option value="fixed-30-days">Fixed 30 days</option>
+          </select>
+          <span id="calculationMethodHelp" class="field-help">Choose the payroll rule your employer uses.</span>
+        </div>
+
         <fieldset class="field-group schedule-field">
           <legend>Working days / week</legend>
           <div class="segmented-control">
@@ -102,7 +112,7 @@
       </div>
       <div class="settings-footnote">
         <span class="settings-note-icon" aria-hidden="true">↗</span>
-        <span>Salary and paid-leave settings carry across months, but stay in this browser and do not sync to other devices.</span>
+        <span>Salary and paid-leave settings carry across months in this browser. They do not sync and are lost if browser data is cleared.</span>
       </div>
     </section>
 
@@ -203,6 +213,7 @@
             <div class="metric-row"><dt>Monthly salary</dt><dd id="monthlySalaryResult">—</dd></div>
             <div class="metric-row"><dt>Calendar days</dt><dd id="calendarDaysResult">0</dd></div>
             <div class="metric-row"><dt>Working days</dt><dd id="workingDaysResult">0</dd></div>
+            <div class="metric-row"><dt>Daily rate divisor</dt><dd id="dailySalaryDivisorResult">0 scheduled days</dd></div>
             <div class="metric-row"><dt>Government holidays</dt><dd id="governmentHolidaysResult">0</dd></div>
             <div class="metric-row"><dt>Weekly offs</dt><dd id="weeklyOffsResult">0</dd></div>
           </dl>
