@@ -410,6 +410,17 @@
       return currencyFormatter.format(value);
     }
 
+    function holidaysForMonth(entries, year, month) {
+      const prefix = `${year}-${String(month).padStart(2, "0")}-`;
+      return normalizeHolidayList(entries.filter((holiday) => holiday.date.startsWith(prefix)));
+    }
+
+    function hasCustomHolidaysForCurrentMonth() {
+      const currentMonthHolidays = holidaysForMonth(holidays, currentYear, currentMonth);
+      const defaultMonthHolidays = holidaysForMonth(DEFAULT_HOLIDAYS, currentYear, currentMonth);
+      return JSON.stringify(currentMonthHolidays) !== JSON.stringify(defaultMonthHolidays);
+    }
+
     function persistHolidayList() {
       if (!storage) {
         holidayListStatus.textContent = "The holiday list changed, but browser storage is unavailable.";
@@ -571,7 +582,7 @@
       documentRef.getElementById("calendarDaysCount").textContent = formatNumber(calculation.totalDays);
       documentRef.getElementById("workingDaysCount").textContent = formatNumber(calculation.scheduledWorkingDays);
       documentRef.getElementById("weeklyOffsCount").textContent = formatNumber(calculation.weeklyOffs);
-      resetButton.disabled = Object.keys(currentRecord.overrides).length === 0;
+      resetButton.disabled = Object.keys(currentRecord.overrides).length === 0 && !hasCustomHolidaysForCurrentMonth();
     }
 
     function renderSummary(calculation) {
@@ -829,9 +840,16 @@
       resetDialog.close();
       currentRecord.overrides = {};
       currentRecord.leaveReturns = {};
+      const monthPrefix = `${currentYear}-${String(currentMonth).padStart(2, "0")}-`;
+      const defaultMonthHolidays = DEFAULT_HOLIDAYS.filter((holiday) => holiday.date.startsWith(monthPrefix));
+      holidays = normalizeHolidayList([
+        ...holidays.filter((holiday) => !holiday.date.startsWith(monthPrefix)),
+        ...defaultMonthHolidays
+      ]);
+      persistHolidayList();
       persist();
       renderAll();
-      status.textContent = `Date markings cleared for ${monthCaption()}.`;
+      status.textContent = `Date markings and imported holidays reset for ${monthCaption()}.`;
     });
 
     loadPeriod(currentYear, currentMonth);
