@@ -18,6 +18,7 @@
   "use strict";
 
   const STORAGE_KEY = "monthline.months.v1";
+  const SALARY_SETTINGS_STORAGE_KEY = "monthline.salary-settings.v1";
   const THEME_STORAGE_KEY = "monthline.theme.v1";
   const HOLIDAY_STORAGE_KEY = "monthline.holidays.v1";
   const VALID_CATEGORIES = new Set(["work", "holiday", "off", "leave"]);
@@ -191,19 +192,49 @@
   }
 
   function emptyRecord() {
-    return { salary: "", paidLeave: 0, workweek: 5, overrides: {}, leaveReturns: {} };
+    return { workweek: 5, overrides: {}, leaveReturns: {} };
+  }
+
+  function normalizeSalarySettings(settings) {
+    const salary = settings && (typeof settings.salary === "string" || typeof settings.salary === "number")
+      ? String(settings.salary)
+      : "";
+    const allowance = Number(settings && settings.paidLeave);
+    return {
+      salary,
+      paidLeave: Number.isFinite(allowance) ? Math.max(0, Math.floor(allowance)) : 0
+    };
+  }
+
+  function loadSalarySettings(storage, records, preferredPeriod) {
+    try {
+      const stored = storage && storage.getItem(SALARY_SETTINGS_STORAGE_KEY);
+      const parsed = stored ? JSON.parse(stored) : null;
+      if (parsed && parsed.version === 1 && parsed.settings && typeof parsed.settings === "object") {
+        return normalizeSalarySettings(parsed.settings);
+      }
+    } catch (error) {
+      return { salary: "", paidLeave: 0 };
+    }
+
+    const otherPeriods = Object.keys(records)
+      .filter((period) => period !== preferredPeriod)
+      .sort((left, right) => right.localeCompare(left));
+    const candidates = [records[preferredPeriod], ...otherPeriods.map((period) => records[period])];
+    const legacySettings = candidates.find((record) => {
+      if (!record || typeof record !== "object") return false;
+      const salary = String(record.salary ?? "").trim();
+      const allowance = Number(record.paidLeave);
+      return salary !== "" || (Number.isFinite(allowance) && allowance > 0);
+    });
+
+    return normalizeSalarySettings(legacySettings);
   }
 
   function normalizeRecord(record, year, month) {
     if (!record || typeof record !== "object") return emptyRecord();
 
     const normalized = emptyRecord();
-    if (typeof record.salary === "string" || typeof record.salary === "number") {
-      normalized.salary = String(record.salary);
-    }
-
-    const allowance = Number(record.paidLeave);
-    normalized.paidLeave = Number.isFinite(allowance) ? Math.max(0, Math.floor(allowance)) : 0;
     normalized.workweek = Number(record.workweek) === 6 ? 6 : 5;
 
     if (record.overrides && typeof record.overrides === "object") {
@@ -296,6 +327,8 @@
     const today = new Date();
     let currentYear = today.getFullYear();
     let currentMonth = today.getMonth() + 1;
+    const initialPeriod = `${currentYear}-${String(currentMonth).padStart(2, "0")}`;
+    const salarySettings = loadSalarySettings(storage, records, initialPeriod);
     let currentKey = "";
     let currentRecord = emptyRecord();
     let focusedDay = 1;
@@ -319,11 +352,22 @@
       }
     }
 
+    function persistSalarySettings() {
+      if (!storage) return;
+      try {
+        storage.setItem(SALARY_SETTINGS_STORAGE_KEY, JSON.stringify({ version: 1, settings: salarySettings }));
+      } catch (error) {
+        status.textContent = "Could not save salary settings in this browser.";
+      }
+    }
+
+    persistSalarySettings();
+
     function setControlsFromRecord() {
       monthSelect.value = String(currentMonth);
       yearInput.value = String(currentYear);
-      salaryInput.value = currentRecord.salary;
-      paidLeaveInput.value = String(currentRecord.paidLeave);
+      salaryInput.value = salarySettings.salary;
+      paidLeaveInput.value = String(salarySettings.paidLeave);
       const selectedWorkweek = documentRef.querySelector(`input[name="workweek"][value="${currentRecord.workweek}"]`);
       if (selectedWorkweek) selectedWorkweek.checked = true;
     }
@@ -569,10 +613,10 @@
     }
 
     function updateRecordFromControls() {
-      currentRecord.salary = salaryInput.value;
-      currentRecord.paidLeave = Math.max(0, Math.floor(Number(paidLeaveInput.value) || 0));
-      paidLeaveInput.value = String(currentRecord.paidLeave);
-      records[currentKey] = currentRecord;
+      salarySettings.salary = salaryInput.value;
+      salarySettings.paidLeave = Math.max(0, Math.floor(Number(paidLeaveInput.value) || 0));
+      paidLeaveInput.value = String(salarySettings.paidLeave);
+      persistSalarySettings();
       persist();
       renderAll();
     }
